@@ -3,7 +3,10 @@
 import logging
 from pathlib import Path
 
-import pytorch_lightning  # noqa: F401
+try:
+    import pytorch_lightning  # noqa: F401
+except ModuleNotFoundError:
+    pytorch_lightning = None
 
 formatter = logging.Formatter(
     fmt="[%(asctime)s %(name)s %(levelname)s] %(message)s",
@@ -19,7 +22,7 @@ logger.addHandler(handler)
 logger.propagate = False
 
 pl_logger = logging.getLogger("pytorch_lightning")
-if len(pl_logger.handlers):
+if pytorch_lightning is not None and len(pl_logger.handlers):
     pl_logger.handlers[0].setFormatter(formatter)
 
 repo_dir = Path(__file__).parent.parent

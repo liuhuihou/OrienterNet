@@ -32,13 +32,23 @@ def resolve_checkpoint_path(experiment_or_path: str) -> Path:
     if not path.exists():
         # provided name of experiment
         path = Path(EXPERIMENTS_PATH, *experiment_or_path.split("/"))
-        if not path.exists():
-            if experiment_or_path in set(p for p, _ in pretrained_models.values()):
-                download_file(f"{DATA_URL}/{experiment_or_path}", path)
-            else:
-                raise FileNotFoundError(path)
+    pretrained_paths = {p for p, _ in pretrained_models.values()}
     if path.is_file():
+        try:
+            torch.load(path, map_location="cpu")
+        except Exception:
+            if experiment_or_path in pretrained_paths or path.name in pretrained_paths:
+                logger.info("Checkpoint at %s is corrupted; redownloading.", path)
+                path.unlink(missing_ok=True)
+                download_file(f"{DATA_URL}/{path.name}", path)
+            else:
+                raise
         return path
+    if not path.exists():
+        if experiment_or_path in pretrained_paths:
+            download_file(f"{DATA_URL}/{experiment_or_path}", path)
+        else:
+            raise FileNotFoundError(path)
     # provided only the experiment name
     maybe_path = path / "last-step.ckpt"
     if not maybe_path.exists():

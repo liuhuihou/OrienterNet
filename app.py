@@ -131,7 +131,7 @@ app = gr.Interface(
     ],
     description=description,
     examples=examples,
-    cache_examples=True,
+    cache_examples=False,
 )
 
 app.launch(share=False)

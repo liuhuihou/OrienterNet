@@ -5,6 +5,7 @@ opencv-python
 Pillow
 tqdm>=4.36.0
 matplotlib
+gradio<5
 plotly
 scipy
 omegaconf
