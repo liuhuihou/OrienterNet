@@ -1,0 +1,47 @@
+[
+  {
+    "index": 0,
+    "scene": "kitti",
+    "name": "2011_09_26/2011_09_26_drive_0005_sync/image_02/data/0000000054.png",
+    "xy_max_error_m": 5.2694,
+    "yaw_max_error_deg": 15.133,
+    "lateral_error_m": 1.9467,
+    "longitudinal_error_m": 4.8966
+  },
+  {
+    "index": 1,
+    "scene": "kitti",
+    "name": "2011_09_26/2011_09_26_drive_0005_sync/image_02/data/0000000055.png",
+    "xy_max_error_m": 3.0468,
+    "yaw_max_error_deg": 3.0256,
+    "lateral_error_m": 1.6154,
+    "longitudinal_error_m": 2.5833
+  },
+  {
+    "index": 2,
+    "scene": "kitti",
+    "name": "2011_09_26/2011_09_26_drive_0005_sync/image_02/data/0000000049.png",
+    "xy_max_error_m": 3.4823,
+    "yaw_max_error_deg": 8.8141,
+    "lateral_error_m": 0.3471,
+    "longitudinal_error_m": 3.465
+  },
+  {
+    "index": 3,
+    "scene": "kitti",
+    "name": "2011_09_26/2011_09_26_drive_0005_sync/image_02/data/0000000052.png",
+    "xy_max_error_m": 3.9617,
+    "yaw_max_error_deg": 5.7844,
+    "lateral_error_m": 0.9249,
+    "longitudinal_error_m": 3.8523
+  },
+  {
+    "index": 4,
+    "scene": "kitti",
+    "name": "2011_09_26/2011_09_26_drive_0005_sync/image_02/data/0000000050.png",
+    "xy_max_error_m": 5.4421,
+    "yaw_max_error_deg": 3.565,
+    "lateral_error_m": 3.9871,
+    "longitudinal_error_m": 3.704
+  }
+]

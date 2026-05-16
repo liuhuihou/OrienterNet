@@ -1,0 +1,3 @@
+config,num_rotations,crop_size_meters,max_init_error,eval_runtime_sec,wall_clock_sec,peak_rss_gib,mean_lateral_error_m,mean_longitudinal_error_m,mean_yaw_error_deg,xy_recall_5m,yaw_recall_5deg
+baseline_default,256,default,default,27.876,31.23,6.78,1.7901,3.4362,3.6082,80,60
+low_cost_rot32_crop48,32,48,16,19.229,23.29,3.45,1.7642,3.7002,7.2644,60,40

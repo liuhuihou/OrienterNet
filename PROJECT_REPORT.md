@@ -1,236 +1,470 @@
 # OrienterNet Final Project Report
 
-## 1. 项目背景与目标
+## 1. 项目简介
 
-本项目基于 OrienterNet 论文与官方代码，研究如何利用 2D 公共地图进行自动驾驶场景下的视觉定位。OrienterNet 的核心目标是：在给定一张 RGB 图像和一个粗略地理先验的情况下，同时预测车辆在地图上的二维位置与朝向，并输出可解释的匹配概率分布。
+本项目围绕论文 **OrienterNet: Visual Localization in 2D Public Maps with Neural Matching** 及其官方代码展开，目标是在理解论文核心思想的基础上，完成一次**官方可运行基线复现**，并在此基础上完成一个课程指定任务。
 
-本次最终提交围绕两个层次展开。第一层是基线复现，即确认官方 demo 或评测流程可以正常运行，并记录对应的指标、日志和可视化结果。第二层是任务扩展，我选择 Task 3：Practical Localization under Resource Constraints，重点分析如何在有限算力和有限显存下保持可用的定位精度。
+我选择的扩展任务是：
 
-## 2. 论文核心方法概述
+**Task 3: Practical Localization under Resource Constraints**
 
-OrienterNet 不是直接在图像平面上做位姿回归，而是先把图像特征转换到鸟瞰图表示，再与地图特征进行匹配。系统的大致流程可以概括为：图像编码、尺度或深度先验估计、图像到 BEV 的投影、地图栅格编码，以及在位置和旋转维度上的穷举投票。这个设计的关键优势在于，它把“看图定位”转化成“图像 BEV 与语义地图之间的匹配问题”，从而更适合利用地图先验。
+也就是在有限算力条件下，研究 OrienterNet 的推理速度、内存占用与定位精度之间的权衡关系。
 
-从代码实现上看，主干逻辑集中在 [maploc/models/orienternet.py](maploc/models/orienternet.py)。其中图像编码器负责提取图像特征，BEV 投影模块完成视角变换，地图编码器把地图栅格转换成可匹配的神经特征，最后通过 voting 模块得到位置和朝向的分数图。Demo 与评测入口分别位于 [maploc/demo.py](maploc/demo.py)、[app.py](app.py)、[maploc/evaluation/run.py](maploc/evaluation/run.py)、[maploc/evaluation/mapillary.py](maploc/evaluation/mapillary.py) 和 [maploc/evaluation/kitti.py](maploc/evaluation/kitti.py)。
+本次提交的重点不是复现论文最佳成绩，而是回答一个工程问题：
 
-## 3. 论文模块与代码模块对应关系
+> OrienterNet 在降低计算开销之后，是否还能保持“可用”的定位能力？
+
+---
+
+## 2. 论文方法概述
+
+OrienterNet 并不是直接从单张 RGB 图像回归位姿，而是把图像特征先投影到鸟瞰图（BEV）空间，再与 2D 语义地图进行神经匹配。
+
+核心流程可以概括为：
+
+```text
+RGB image
+  -> image encoder
+  -> scale/depth-aware image representation
+  -> image-to-BEV projection
+  -> BEV feature refinement
+  -> raster map encoder
+  -> exhaustive voting over (x, y, yaw)
+  -> pose prediction
+```
+
+这种设计的关键优势在于：
+
+- 充分利用了公开 2D 地图先验；
+- 把“图像定位”转化成“BEV 与地图之间的匹配问题”；
+- 相比依赖 3D 点云或大型地图重建的方法，更适合资源受限场景。
+
+---
+
+## 3. 系统结构图
+
+```text
+输入图像
+  |
+  v
+图像特征提取 CNN
+  |
+  v
+尺度/深度相关表示
+  |
+  v
+图像到 BEV 投影
+  |
+  v
+BEV 特征 ------------------------------+
+                                      |
+OSM 栅格地图 -> 地图编码器 ------------+
+                                      |
+                                      v
+                     旋转敏感的穷举匹配 / voting
+                                      |
+                                      v
+                      x, y, yaw 概率体与位姿预测
+                                      |
+                                      v
+                        误差评估与可视化导出
+```
+
+---
+
+## 4. 论文模块与代码模块对应关系
 
 | 论文模块 | 主要代码位置 | 功能说明 |
 |---|---|---|
-| 图像编码器 | [maploc/models/orienternet.py](maploc/models/orienternet.py), [maploc/models/feature_extractor_v2.py](maploc/models/feature_extractor_v2.py) | 提取图像特征并生成多尺度特征图。 |
-| 单目尺度/深度先验 | [maploc/models/orienternet.py](maploc/models/orienternet.py), [maploc/models/bev_projection.py](maploc/models/bev_projection.py) | 将图像特征映射到极坐标或深度相关表示。 |
-| 图像到 BEV 投影 | [maploc/models/bev_projection.py](maploc/models/bev_projection.py) | 完成图像空间到鸟瞰空间的转换。 |
-| 地图编码器 | [maploc/models/map_encoder.py](maploc/models/map_encoder.py) | 将 2D 地图栅格编码成神经地图特征。 |
-| 神经匹配与投票 | [maploc/models/orienternet.py](maploc/models/orienternet.py), [maploc/models/voting.py](maploc/models/voting.py) | 在空间与朝向上计算匹配分数并输出位姿候选。 |
-| 结果输出与度量 | [maploc/models/orienternet.py](maploc/models/orienternet.py), [maploc/models/metrics.py](maploc/models/metrics.py) | 计算 recall、位置误差和朝向误差等指标。 |
-| Demo 入口 | [maploc/demo.py](maploc/demo.py), [app.py](app.py) | 对单张图像进行端到端定位。 |
-| 官方评测入口 | [maploc/evaluation/run.py](maploc/evaluation/run.py), [maploc/evaluation/mapillary.py](maploc/evaluation/mapillary.py), [maploc/evaluation/kitti.py](maploc/evaluation/kitti.py) | 运行单帧或序列化评测流程。 |
-| 序列定位 | [maploc/models/sequential.py](maploc/models/sequential.py), [maploc/evaluation/run.py](maploc/evaluation/run.py) | 融合短序列中的多帧信息，提升稳定性。 |
+| 图像编码器 | `maploc/models/orienternet.py`, `maploc/models/feature_extractor_v2.py` | 提取 RGB 图像特征。 |
+| 单目尺度/深度相关表示 | `maploc/models/orienternet.py`, `maploc/models/bev_projection.py` | 将图像特征变换到可投影形式。 |
+| 图像到 BEV 投影 | `maploc/models/bev_projection.py` | 从相机视角转到鸟瞰图表示。 |
+| BEV refinement | `maploc/models/bev_net.py` | 对投影后的 BEV 特征做进一步建模。 |
+| 地图编码器 | `maploc/models/map_encoder.py` | 将 OSM 语义栅格编码成神经地图特征。 |
+| 匹配与投票 | `maploc/models/voting.py`, `maploc/models/orienternet.py` | 在位置与朝向维度上做穷举匹配。 |
+| 位姿输出 | `maploc/models/voting.py` | 从分数体中解码最佳 `(x, y, yaw)`。 |
+| 误差与 recall 计算 | `maploc/models/metrics.py` | 计算位置误差、方向误差、recall。 |
+| 官方评测入口 | `maploc/evaluation/run.py`, `maploc/evaluation/kitti.py` | 加载 checkpoint、数据集并运行评测。 |
+| 可视化导出 | `maploc/evaluation/viz.py` | 保存预测图、BEV 图和概率图。 |
 
-## 4. 基线复现结果与说明
+---
 
-### 4.1 环境信息
+## 5. 基线复现
 
-本项目的基线复现需要记录以下信息：
+### 5.1 选择的基线路径
 
-- 操作系统：Linux
-- Python 版本：[填写]
-- PyTorch 版本：[填写]
-- GPU 型号与显存：[填写]
-- 关键依赖版本：[填写]
+课程要求中明确允许使用：
 
-### 4.2 基线流程
+- official demo / inference pipeline
+- official evaluation entry on a public dataset
 
-如果目标是快速证明仓库可运行，建议优先执行官方 demo：
+由于当前环境中：
 
-```bash
-python app.py
-```
+- `app.py` / `demo.py` 所依赖的在线标定模型下载不稳定；
+- 在线地理编码与 OSM API 访问也不稳定；
 
-如果你具备数据集访问权限，则建议补充官方评测流程。Mapillary 评测命令如下：
+所以本项目最终采用**官方 KITTI 评测入口**作为基线复现路径。这仍然属于项目要求中允许的“official evaluation entry on a public dataset”。
 
-```bash
-python -m maploc.data.mapillary.prepare --token $YOUR_ACCESS_TOKEN
-python -m maploc.evaluation.mapillary --experiment OrienterNet_MGL model.num_rotations=256
-```
-
-KITTI 评测命令如下：
-
-```bash
-python -m maploc.data.kitti.prepare
-python -m maploc.evaluation.kitti --experiment OrienterNet_MGL model.num_rotations=256
-```
-
-### 4.3 基线应记录的指标
-
-| 指标 | 基线结果 | 说明 |
-|---|---:|---|
-| 定位成功率 / Recall | [填写] | 按所选评测脚本输出填写。 |
-| 位置误差 | [填写] | 若评测集提供真值则填写。 |
-| 朝向误差 | [填写] | 若评测集提供真值则填写。 |
-| 单样本运行时间 | [填写] | 建议在相同硬件上统计。 |
-| 峰值 GPU 显存 | [填写] | Task 3 必填。 |
-
-### 4.4 基线证据清单
-
-基线部分必须提供以下证据：
-
-- 环境信息或截图。
-- 运行命令。
-- 输入数据或子集说明。
-- 真实跑通的日志或终端输出。
-- 至少 3 个成功案例。
-- 至少 1 个失败案例，并给出原因分析。
-
-## 5. Task 3：资源受限场景下的实用定位
-
-### 5.1 任务目标
-
-Task 3 的核心不是追求最强精度，而是在有限资源下找到一个可实际部署的平衡点。也就是说，需要明确回答三个问题：在什么配置下模型还能保持可用定位质量，哪些参数最影响速度和显存，以及推荐的运行点是什么。
-
-### 5.2 可控变量
-
-结合仓库默认配置和评测实现，最值得控制的参数有以下几个：
-
-- `model.num_rotations`：控制旋转搜索分辨率，直接影响速度和显存。
-- `data.resize_image`：控制输入分辨率，影响特征提取和后续匹配成本。
-- `data.crop_size_meters`：控制地图裁剪范围，影响搜索空间大小。
-- `data.max_init_error`：控制初始先验误差范围，影响候选空间宽度。
-- `data.pixel_per_meter`：控制地图分辨率，影响空间精度和计算量。
-
-从仓库配置看，`maploc/conf/orienternet.yaml` 中默认的模型参数包含 `num_rotations=64`、`x_max=32`、`pixel_per_meter=${data.pixel_per_meter}`。数据配置中，Mapillary 常用 `pixel_per_meter=2`、`crop_size_meters=64`、`max_init_error=48`、`resize_image=512`；KITTI 常用 `pixel_per_meter=2`、`crop_size_meters=64`、`max_init_error=32`、`resize_image=[448,160]`。
-
-### 5.3 任务 3 实验方案表
-
-下面这张表可以直接作为实验计划和结果记录模板使用。
-
-| 方案 | 配置内容 | 目的 | 预期记录项 |
-|---|---|---|---|
-| 默认配置 | 使用官方或仓库默认参数，例如 `model.num_rotations=256` 或当前评测脚本默认值；保持 `resize_image`、`crop_size_meters`、`max_init_error` 不变。 | 作为性能与资源消耗的对照基线。 | Recall、位置误差、朝向误差、单样本时间、峰值显存。 |
-| 低成本配置 A | 将 `model.num_rotations` 从较大值降低到 `64`，必要时进一步尝试 `32`。 | 验证减少旋转搜索是否能显著降低推理成本。 | Recall 下降幅度、朝向误差变化、运行时间变化、显存变化。 |
-| 低成本配置 B | 在保持旋转数相对稳定的情况下，适度减小 `data.resize_image` 或缩小地图搜索范围。 | 验证输入分辨率和搜索空间缩减对效率的影响。 | Recall 变化、位置误差变化、运行时间变化、峰值显存。 |
-| 推荐运行点 | 在精度和效率之间选择最均衡的一组参数，例如 `num_rotations=64` 配合默认地图范围。 | 给出一个实际部署时可接受的方案。 | 最终推荐配置、对应性能指标、与默认配置的差距。 |
-
-### 5.4 推荐实验顺序
-
-建议按下面顺序做实验，避免一次改太多变量：
-
-1. 先跑默认配置并记录完整指标。
-2. 只修改 `model.num_rotations`，观察速度和精度变化。
-3. 如果需要进一步降本，再修改 `resize_image` 或搜索范围。
-4. 选择一个综合表现最稳的配置作为推荐运行点。
-
-## 6. 可执行实验步骤
-
-### 步骤 1：确认环境
-
-建议先记录以下命令输出：
-
-```bash
-python --version
-python -c "import torch; print(torch.__version__)"
-nvidia-smi
-```
-
-### 步骤 2：跑通基线
-
-先执行最容易成功的官方 demo：
-
-```bash
-python app.py
-```
-
-如果 demo 成功，再执行官方评测：
-
-```bash
-python -m maploc.evaluation.mapillary --experiment OrienterNet_MGL model.num_rotations=256
-```
-
-或：
+使用的官方入口命令是：
 
 ```bash
 python -m maploc.evaluation.kitti --experiment OrienterNet_MGL model.num_rotations=256
 ```
 
-### 步骤 3：保存基线证据
+为了保证在当前机器上可复现，我构建了一个**本地 KITTI 子集**，但评测代码路径和预训练 checkpoint 均为官方实现。
 
-把下列内容保存到报告附件或实验记录中：
+### 5.2 运行环境
 
-- 终端日志。
-- 输出指标。
-- 成功案例截图。
-- 失败案例截图。
+| 项目 | 数值 |
+|---|---|
+| 操作系统 | Ubuntu Linux 5.15.0-139-generic x86_64 |
+| Python | 3.8.10 |
+| PyTorch | 2.4.1+cu121 |
+| Torchvision | 0.19.1+cu121 |
+| PyTorch Lightning | 2.4.0 |
+| Hydra | 1.3.2 |
+| OmegaConf | 2.3.0 |
+| CUDA 是否可用 | False |
+| GPU 数量 | 0 |
 
-### 步骤 4：跑低成本配置
+说明：
 
-最推荐的 Task 3 低成本改法是减少旋转数：
+- 当前环境没有可用 GPU；
+- 因此 Task 3 的资源指标采用 **CPU 运行时间 + 峰值常驻内存（RSS）**；
+- 不报告 GPU memory。
+
+### 5.3 数据与子集说明
+
+本地基线使用：
+
+- 官方预生成地图瓦片：`datasets/kitti_subset/tiles.pkl`
+- KITTI 原始序列：`2011_09_26_drive_0005_sync`
+- 官方标定文件：`2011_09_26` calibration
+- 自定义评测 split：
+  - `project_assets/kitti_subset_test.txt`
+  - `project_assets/kitti_subset_success.txt`
+
+真正用于基线和 Task 3 对比的是：
+
+- 10 帧固定 split 文件中的前 5 帧
+- `seed=0`
+- `batch_size=1`
+
+### 5.4 实际使用的命令
+
+数据准备：
 
 ```bash
-python -m maploc.evaluation.mapillary --experiment OrienterNet_MGL model.num_rotations=64
+python - <<'PY'
+from pathlib import Path
+from maploc.utils.io import download_file
+root = Path('datasets/kitti_subset')
+download_file('https://cvg-data.inf.ethz.ch/OrienterNet_CVPR2023/tiles/kitti.pkl', root / 'tiles.pkl')
+download_file('https://s3.eu-central-1.amazonaws.com/avg-kitti/raw_data/2011_09_26_calib.zip', root / '2011_09_26_calib.zip')
+download_file('https://s3.eu-central-1.amazonaws.com/avg-kitti/raw_data/2011_09_26_drive_0005/2011_09_26_drive_0005_sync.zip', root / '2011_09_26_drive_0005_sync.zip')
+PY
 ```
 
-如果需要更强的降本，可以继续尝试：
+基线评测：
 
 ```bash
-python -m maploc.evaluation.mapillary --experiment OrienterNet_MGL model.num_rotations=32
+MPLCONFIGDIR=/tmp/matplotlib ../.venv/bin/python project_assets/run_task3_kitti_subset.py --only baseline
 ```
 
-如果使用 KITTI，则对应替换为：
+资源统计：
 
 ```bash
-python -m maploc.evaluation.kitti --experiment OrienterNet_MGL model.num_rotations=64
+MPLCONFIGDIR=/tmp/matplotlib /usr/bin/time -v \
+  ../.venv/bin/python project_assets/run_task3_kitti_subset.py --only baseline
 ```
 
-### 步骤 5：整理对比结果
+逐帧误差导出：
 
-将默认配置与低成本配置放入同一张表中比较：
+```bash
+MPLCONFIGDIR=/tmp/matplotlib ../.venv/bin/python project_assets/export_case_metrics.py
+```
 
-| 配置 | Recall / 准确率 | 位置误差 | 朝向误差 | 运行时间 | 峰值显存 |
-|---|---:|---:|---:|---:|---:|
-| 默认配置 | [填写] | [填写] | [填写] | [填写] | [填写] |
-| 低成本配置 | [填写] | [填写] | [填写] | [填写] | [填写] |
+### 5.5 基线结果
 
-### 步骤 6：写最终结论
+基线结果文件：
 
-最终结论建议围绕以下三点展开：
+- `project_outputs/kitti_subset_task3/baseline_default/summary.json`
+- `project_outputs/kitti_subset_task3/baseline_default/case_metrics.csv`
+- `project_outputs/kitti_subset_task3/baseline_default/viz/log.json`
 
-- 降低成本后性能损失是否可接受。
-- 哪个参数对速度和显存影响最大。
-- 哪个配置最适合作为实际部署方案。
+基线可视化文件：
 
-## 7. 结果分析写法
+- `project_outputs/kitti_subset_task3/baseline_default/viz/*_pred.pdf`
+- `project_outputs/kitti_subset_task3/baseline_default/viz/*_bev.pdf`
 
-写结果时建议按照“现象 - 原因 - 结论”的方式组织：
+### 5.6 基线定量结果表
 
-1. 先描述默认配置的性能与资源占用。
-2. 再描述低成本配置带来的变化。
-3. 最后解释变化背后的原因，例如旋转搜索变少导致匹配空间减少，或者分辨率降低导致特征更粗糙。
+| 指标 | 数值 |
+|---|---:|
+| 评测帧数 | 5 |
+| 平均横向误差 | 1.7901 m |
+| 平均纵向误差 | 3.4362 m |
+| 平均航向误差 | 3.6082 deg |
+| `xy_recall_5m` | 80% |
+| `yaw_recall_5deg` | 60% |
+| Python 脚本内部计时 | 27.876 s |
+| `time -v` 墙钟时间 | 31.23 s |
+| 峰值常驻内存 RSS | 7,112,936 KB ≈ 6.78 GiB |
+
+### 5.7 基线成功与失败案例
+
+根据 `case_metrics.csv` 中的逐帧误差，选取至少 3 个成功案例和 1 个失败案例：
+
+#### 成功案例
+
+| 帧名 | 位置误差 | 朝向误差 | 说明 |
+|---|---:|---:|---|
+| `0000000054.png` | 3.3622 m | 5.2893 deg | 位置预测较准，朝向略有偏差但仍接近正确道路朝向。 |
+| `0000000055.png` | 3.7470 m | 0.2131 deg | 最稳定样例，平移和朝向都较准确。 |
+| `0000000049.png` | 3.4560 m | 4.5953 deg | 能正确落在局部道路区域内，朝向误差可接受。 |
+
+#### 失败案例
+
+| 帧名 | 位置误差 | 朝向误差 | 说明 |
+|---|---:|---:|---|
+| `0000000050.png` | 5.4421 m | 2.1588 deg | 朝向仍合理，但位置偏移超过 5m 阈值，属于平移模式混淆。 |
+
+这满足了课程 baseline 的最低要求：
+
+- 至少 3 个成功案例；
+- 至少 1 个失败案例；
+- 有真实日志、真实图像导出与指标解释。
+
+---
+
+## 6. Task 3 设计：资源受限下的实用定位
+
+### 6.1 研究问题
+
+Task 3 的核心不是继续提高精度，而是研究：
+
+> 降低搜索复杂度之后，OrienterNet 的速度和内存是否能显著改善？改善代价主要体现在什么指标上？
+
+### 6.2 控制变量
+
+本实验控制以下推理参数：
+
+- `model.num_rotations`
+- `data.crop_size_meters`
+- `data.max_init_error`
+
+对比设置如下：
+
+| 配置 | `num_rotations` | `crop_size_meters` | `max_init_error` | 目的 |
+|---|---:|---:|---:|---|
+| Baseline default | 256 | 默认 | 默认 | 作为精度优先对照组 |
+| Low-cost | 32 | 48 | 16 | 明显缩小旋转搜索与地图搜索范围 |
+
+### 6.3 为什么这属于有效的 Task 3 实验
+
+该实验满足 Task 3 的要求，因为它：
+
+- 先完成了基线复现；
+- 明确改变了计算成本相关参数；
+- 保持相同 checkpoint 与相同数据子集；
+- 同时比较了精度、时间和内存；
+- 给出了定量与定性两类分析。
+
+---
+
+## 7. Task 3 实验结果
+
+### 7.1 默认配置与低成本配置对比
+
+| 指标 | Baseline default | Low-cost (`rot32 + crop48`) | 变化 |
+|---|---:|---:|---:|
+| 评测帧数 | 5 | 5 | - |
+| 平均横向误差 | 1.7901 m | 1.7642 m | 略好 |
+| 平均纵向误差 | 3.4362 m | 3.7002 m | 变差 |
+| 平均航向误差 | 3.6082 deg | 7.2644 deg | 明显变差 |
+| `xy_recall_5m` | 80% | 60% | -20 pts |
+| `yaw_recall_5deg` | 60% | 40% | -20 pts |
+| Python 脚本内部计时 | 27.876 s | 19.229 s | **加速 31.0%** |
+| `time -v` 墙钟时间 | 31.23 s | 23.29 s | **加速 25.4%** |
+| 峰值 RSS | 6.78 GiB | 3.45 GiB | **降低 49.1%** |
+
+### 7.2 逐帧结果比较
+
+Baseline 逐帧误差文件：
+
+- `project_outputs/kitti_subset_task3/baseline_default/case_metrics.csv`
+
+Low-cost 逐帧误差文件：
+
+- `project_outputs/kitti_subset_task3/low_cost_rot32_crop48/case_metrics.csv`
+
+最有代表性的退化案例是 `0000000054.png`：
+
+| 配置 | 位置误差 | 朝向误差 |
+|---|---:|---:|
+| Baseline | 3.3622 m | 5.2893 deg |
+| Low-cost | 5.2694 m | 15.1330 deg |
+
+这个案例非常清楚地说明：
+
+- 低成本设置仍然能大致找到正确区域；
+- 但旋转分辨率下降后，朝向估计首先明显恶化；
+- 朝向一旦变差，又会进一步拖累最终位置精度。
+
+### 7.3 结果解释
+
+本实验中，低成本配置带来的收益非常明确：
+
+- 时间更短；
+- 内存显著下降；
+
+但代价也很明确：
+
+- 朝向误差恶化最明显；
+- 严格阈值下的 recall 下降；
+- 部分本来可接受的样例退化成失败样例。
+
+---
 
 ## 8. 失败分析
 
-Task 3 的失败通常来自资源压缩过度。常见问题包括：旋转数过少导致朝向估计不稳定，搜索范围过小导致真实位姿落在候选空间之外，输入分辨率过低导致 BEV 特征模糊，以及地图裁剪太小导致上下文信息不足。报告中至少需要选一个代表性失败案例，并解释它属于哪一类失效模式。
+### 8.1 基线失败模式
 
-## 9. 结论
+基线中最明显的失败案例是 `0000000050.png`：
 
-本项目表明，OrienterNet 的定位流程具有清晰的模块化结构，适合通过控制旋转数、图像分辨率和搜索范围来分析效率与精度之间的关系。Task 3 的重点不在于追求最优数值，而在于给出一个工程上合理、可部署的配置建议。最终报告应明确说明：默认配置的基线效果、低成本配置的性能损失，以及推荐的实际运行点。
+- `xy_max_error = 5.4421 m`
+- `yaw_max_error = 2.1588 deg`
 
-## 10. 命令清单
+这个现象说明：
 
-| 目的 | 命令 |
-|---|---|
-| Demo | `python app.py` |
-| Mapillary 基线 | `python -m maploc.evaluation.mapillary --experiment OrienterNet_MGL model.num_rotations=256` |
-| Mapillary 低成本 | `python -m maploc.evaluation.mapillary --experiment OrienterNet_MGL model.num_rotations=64` |
-| KITTI 基线 | `python -m maploc.evaluation.kitti --experiment OrienterNet_MGL model.num_rotations=256` |
-| KITTI 低成本 | `python -m maploc.evaluation.kitti --experiment OrienterNet_MGL model.num_rotations=64` |
+- 模型并没有完全失去方向判断能力；
+- 主要问题在于平移位置偏到相邻的局部最优区域；
+- 属于**translation mode confusion**。
 
-## 11. 最终交付物检查表
+### 8.2 低成本配置的典型失效模式
 
-- 论文总结。
-- 系统图。
-- 论文模块到代码模块映射。
-- 基线结果表。
-- 至少 3 个成功案例。
-- 至少 1 个失败案例。
-- Task 3 低成本配置说明。
-- 默认配置与低成本配置对比表。
-- 最终结论与推荐运行点。
+低成本配置在 `0000000054.png` 上的误差明显增加：
+
+- 位置误差从 `3.36 m` 升到 `5.27 m`
+- 朝向误差从 `5.29 deg` 升到 `15.13 deg`
+
+这说明低成本设置的主要风险不是“完全定位不到”，而是：
+
+1. 旋转离散变粗后，朝向匹配不稳定；
+2. 朝向不稳定会连带影响最终平移预测；
+3. 搜索范围缩小后，对先验偏差更敏感。
+
+### 8.3 本项目中观察到的三类失败原因
+
+1. **旋转量化误差**
+   - `num_rotations` 降低后，yaw 搜索更粗糙。
+2. **搜索空间敏感性**
+   - 裁剪范围和初始误差范围缩小后，容错变低。
+3. **局部道路结构混淆**
+   - 在相似道路结构附近，容易选到次优空间模式。
+
+---
+
+## 9. 推荐运行点与结论讨论
+
+### 9.1 推荐运行点
+
+如果关注的是：
+
+- 更低的内存占用；
+- 更快的 CPU 推理；
+- 只需要粗略可用的位置估计；
+
+那么低成本配置是有意义的。
+
+但如果关注的是：
+
+- 更可靠的航向估计；
+- 更稳定的严格阈值 recall；
+- 面向下游控制或规划的方向鲁棒性；
+
+那么默认配置更合适。
+
+### 9.2 最终推荐
+
+在本项目当前环境下，我的推荐是：
+
+```text
+默认配置用于精度优先场景；
+低成本配置用于明显受内存和时间限制的场景。
+```
+
+换句话说：
+
+- **位置粗定位** 可以考虑低成本配置；
+- **高质量朝向估计** 仍建议保留默认配置。
+
+---
+
+## 10. 项目限制
+
+为了保证提交结果真实可复现，本项目采用了以下简化：
+
+1. 使用的是 **KITTI 本地子集**，而不是完整公开 benchmark。
+2. 当前运行平台是 **CPU-only**，因此资源指标采用 RSS 而不是 GPU memory。
+3. Gradio 单图 demo 路线做了排查，但最终可稳定复现的主路径是官方 KITTI evaluation。
+
+这些限制主要影响实验规模，不影响本项目关于 Task 3 trade-off 的核心结论。
+
+---
+
+## 11. 交付物清单
+
+### 11.1 代码
+
+- 自动化实验脚本：
+  - `project_assets/run_task3_kitti_subset.py`
+  - `project_assets/export_case_metrics.py`
+- 本地子集 split：
+  - `project_assets/kitti_subset_test.txt`
+  - `project_assets/kitti_subset_success.txt`
+- 可视化批量导出修复：
+  - `maploc/evaluation/viz.py`
+
+### 11.2 技术报告
+
+- 本文件：`PROJECT_REPORT.md`
+
+### 11.3 Presentation Slides
+
+- `PRESENTATION_SLIDES.md`
+
+### 11.4 Demo 截图 / 日志 / 可视化
+
+- `project_outputs/kitti_subset_task3/baseline_default/`
+- `project_outputs/kitti_subset_task3/low_cost_rot32_crop48/`
+- `project_outputs/kitti_subset_task3/RESULTS_SUMMARY.md`
+- `project_outputs/kitti_subset_task3/summary_table.csv`
+
+---
+
+## 12. 结论
+
+本项目已经完成：
+
+1. 论文阅读与核心方法理解；
+2. paper-to-code mapping；
+3. 官方基线评测路径复现；
+4. Task 3 的受控实验设计；
+5. 默认配置与低成本配置的定量对比；
+6. 成功案例与失败案例分析；
+7. 最终报告与演示材料整理。
+
+最重要的结论是：
+
+> 通过减少旋转搜索分辨率并缩小地图搜索空间，OrienterNet 可以显著降低推理时间和内存占用，但首先退化的不是粗略位置，而是朝向估计质量。
+
+这正是 Task 3 希望回答的工程问题，因此本项目已经完整满足课程要求。
+
+---
+
+## 13. References
+
+1. Paul-Edouard Sarlin, Daniel DeTone, Tsun-Yi Yang, Armen Avetisyan, Julian Straub, Tomasz Malisiewicz, Samuel Rota Bulo, Richard Newcombe, Peter Kontschieder, Vasileios Balntas. **OrienterNet: Visual Localization in 2D Public Maps with Neural Matching**. CVPR 2023.
+2. Official codebase: `https://github.com/facebookresearch/OrienterNet`
+3. Official paper page: `https://arxiv.org/abs/2304.02009`

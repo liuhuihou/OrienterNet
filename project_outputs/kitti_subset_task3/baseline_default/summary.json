@@ -1,0 +1,63 @@
+{
+  "name": "baseline_default",
+  "elapsed_sec": 27.876,
+  "num_samples": 5,
+  "config": {
+    "model": {
+      "image_encoder": {
+        "backbone": {
+          "pretrained": false
+        }
+      }
+    },
+    "data": {
+      "data_dir": "/home/liujiahui/myfile/robote_project/final project/OrienterNet/datasets/kitti_subset",
+      "tiles_filename": "tiles.pkl",
+      "splits": {
+        "train": "/home/liujiahui/myfile/robote_project/final project/OrienterNet/project_assets/kitti_subset_test.txt",
+        "val": "/home/liujiahui/myfile/robote_project/final project/OrienterNet/project_assets/kitti_subset_test.txt",
+        "test": "/home/liujiahui/myfile/robote_project/final project/OrienterNet/project_assets/kitti_subset_test.txt"
+      },
+      "loading": {
+        "train": {
+          "batch_size": 1,
+          "num_workers": 0
+        },
+        "val": {
+          "batch_size": 1,
+          "num_workers": 0
+        },
+        "test": {
+          "batch_size": 1,
+          "num_workers": 0
+        }
+      },
+      "max_num_val": null,
+      "drop_train_too_close_to_val": null
+    }
+  },
+  "metrics": {
+    "directional_error_mean_m": [
+      1.7901,
+      3.4362
+    ],
+    "yaw_max_error_mean_deg": 3.6082,
+    "directional_recall_at_1_3_5m": [
+      [
+        40.0,
+        80.0,
+        100.0
+      ],
+      [
+        0.0,
+        20.0,
+        100.0
+      ]
+    ],
+    "yaw_recall_at_1_3_5deg": [
+      20.0,
+      40.0,
+      60.0
+    ]
+  }
+}

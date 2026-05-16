@@ -1,0 +1,47 @@
+{
+  "smoke_default_1frame": {
+    "name": "smoke_default_1frame",
+    "elapsed_sec": 997.036,
+    "num_samples": 1,
+    "note": "Cold-start smoke validation only; not used for final cost comparison.",
+    "metrics": {
+      "directional_error_mean_m": [
+        1.0342,
+        3.2977
+      ],
+      "yaw_max_error_mean_deg": 4.5953
+    }
+  },
+  "baseline_default": {
+    "name": "baseline_default",
+    "elapsed_sec": 27.876,
+    "wall_clock_sec": 31.23,
+    "peak_rss_gib": 6.78,
+    "num_samples": 5,
+    "metrics": {
+      "directional_error_mean_m": [
+        1.7901,
+        3.4362
+      ],
+      "yaw_max_error_mean_deg": 3.6082,
+      "xy_recall_5m": 80.0,
+      "yaw_recall_5deg": 60.0
+    }
+  },
+  "low_cost_rot32_crop48": {
+    "name": "low_cost_rot32_crop48",
+    "elapsed_sec": 19.229,
+    "wall_clock_sec": 23.29,
+    "peak_rss_gib": 3.45,
+    "num_samples": 5,
+    "metrics": {
+      "directional_error_mean_m": [
+        1.7642,
+        3.7002
+      ],
+      "yaw_max_error_mean_deg": 7.2644,
+      "xy_recall_5m": 60.0,
+      "yaw_recall_5deg": 40.0
+    }
+  }
+}

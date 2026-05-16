@@ -1,0 +1,6 @@
+index,scene,name,xy_max_error_m,yaw_max_error_deg,lateral_error_m,longitudinal_error_m
+0,kitti,2011_09_26/2011_09_26_drive_0005_sync/image_02/data/0000000054.png,3.3622,5.2893,0.508,3.3236
+1,kitti,2011_09_26/2011_09_26_drive_0005_sync/image_02/data/0000000055.png,3.747,0.2131,2.7333,2.563
+2,kitti,2011_09_26/2011_09_26_drive_0005_sync/image_02/data/0000000049.png,3.456,4.5953,1.0342,3.2977
+3,kitti,2011_09_26/2011_09_26_drive_0005_sync/image_02/data/0000000052.png,4.3474,5.7844,0.6879,4.2926
+4,kitti,2011_09_26/2011_09_26_drive_0005_sync/image_02/data/0000000050.png,5.4421,2.1588,3.9871,3.704

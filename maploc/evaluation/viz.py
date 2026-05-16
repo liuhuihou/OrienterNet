@@ -98,7 +98,8 @@ def plot_example_single(
         ha="left",
         color="w",
     )
-    plt.show()
+    if out_dir is None:
+        plt.show()
     if out_dir is not None:
         name_ = name.replace("/", "_")
         p = str(out_dir / f"{scene}_{name_}_{{}}.pdf")
@@ -154,7 +155,8 @@ def plot_example_single(
         dpi=50,
         cmaps="jet",
     )
-    plt.show()
+    if out_dir is None:
+        plt.show()
 
     if out_dir is not None:
         save_plot(p.format("bev"))
