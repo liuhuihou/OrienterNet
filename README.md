@@ -1,257 +1,226 @@
-<p align="center">
-  <h1 align="center"><ins>OrienterNet</ins><br>Visual Localization in 2D Public Maps<br>with Neural Matching</h1>
-  <p align="center">
-    <a href="https://psarlin.com/">Paul-Edouard&nbsp;Sarlin</a>
-    ·
-    <a href="https://danieldetone.com/">Daniel&nbsp;DeTone</a>
-    ·
-    <a href="https://scholar.google.com/citations?user=WhISCE4AAAAJ&hl=en">Tsun-Yi&nbsp;Yang</a>
-    ·
-    <a href="https://scholar.google.com/citations?user=Ta4TDJoAAAAJ&hl=en">Armen&nbsp;Avetisyan</a>
-    ·
-    <a href="https://scholar.google.com/citations?hl=en&user=49_cCT8AAAAJ">Julian&nbsp;Straub</a>
-    <br>
-    <a href="https://tom.ai/">Tomasz&nbsp;Malisiewicz</a>
-    ·
-    <a href="https://scholar.google.com/citations?user=484sccEAAAAJ&hl=en">Samuel&nbsp;Rota&nbsp;Bulo</a>
-    ·
-    <a href="https://scholar.google.com/citations?hl=en&user=MhowvPkAAAAJ">Richard&nbsp;Newcombe</a>
-    ·
-    <a href="https://scholar.google.com/citations?hl=en&user=CxbDDRMAAAAJ">Peter&nbsp;Kontschieder</a>
-    ·
-    <a href="https://scholar.google.com/citations?user=AGoNHcsAAAAJ&hl=en">Vasileios&nbsp;Balntas</a>
-  </p>
-  <h2 align="center">CVPR 2023</h2>
-  <h3 align="center">
-    <a href="https://sarlinpe-orienternet.hf.space">Web demo</a>
-    | <a href="https://colab.research.google.com/drive/1zH_2mzdB18BnJVq48ZvJhMorcRjrWAXI?usp=sharing">Colab</a>
-    | <a href="https://arxiv.org/pdf/2304.02009.pdf">Paper</a> 
-    | <a href="https://psarlin.com/orienternet">Project Page</a>
-    | <a href="https://youtu.be/wglW8jnupSs">Video</a>
-  </h3>
-  <div align="center"></div>
-</p>
-<p align="center">
-    <a href="https://psarlin.com/orienternet"><img src="assets/teaser.svg" alt="teaser" width="60%"></a>
-    <br>
-    <em>OrienterNet is a deep neural network that can accurately localize an image<br>using the same 2D semantic maps that humans use to orient themselves.</em>
-</p>
+# OrienterNet
 
-##
+OrienterNet 是一个基于 OpenStreetMap 的视觉定位项目：输入一张街景图片，模型预测图片对应的位置和朝向。
 
-This repository hosts the source code for OrienterNet, a research project by Meta Reality Labs. OrienterNet leverages the power of deep learning to provide accurate positioning of images using free and globally-available maps from OpenStreetMap. As opposed to complex existing algorithms that rely on 3D point clouds, OrienterNet estimates a position and orientation by matching a neural Bird's-Eye-View with 2D maps.
+这个仓库主要有 4 种用法：
 
-## Installation
+1. 跑本地 Demo
+2. 评测 KITTI 数据集
+3. 评测 Mapillary Geo-Localization 数据集
+4. 训练模型
 
-OrienterNet requires Python >= 3.8 and [PyTorch](https://pytorch.org/).  To run the demo, clone this repo and install the minimal requirements:
+## 1. 环境准备
+
+建议使用 Python 3.8 及以上版本。
+
+如果你只想跑 Demo：
 
 ```bash
-git clone https://github.com/facebookresearch/OrienterNet
 python -m pip install -r requirements/demo.txt
 ```
 
-To run the evaluation and training, install the full requirements:
+如果你要做评测或训练：
 
 ```bash
 python -m pip install -r requirements/full.txt
 ```
 
-## Demo ➡️ [![hf](https://huggingface.co/datasets/huggingface/badges/raw/main/open-in-hf-spaces-md.svg)](https://sarlinpe-orienternet.hf.space) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1zH_2mzdB18BnJVq48ZvJhMorcRjrWAXI?usp=sharing)
-
-Try our minimal demo - take a picture with your phone in any city and find its exact location in a few seconds!
-- [Web demo with Gradio and Huggingface Spaces](https://sarlinpe-orienternet.hf.space)
-- [Cloud demo with Google Colab](https://colab.research.google.com/drive/1zH_2mzdB18BnJVq48ZvJhMorcRjrWAXI?usp=sharing)
-- Local demo with Jupyter nobook [`demo.ipynb`](./demo.ipynb)
-
-<p align="center">
-    <a href="https://huggingface.co/spaces/sarlinpe/OrienterNet"><img src="assets/demo.jpg" alt="demo" width="60%"></a>
-    <br>
-    <em>OrienterNet positions any image within a large area - try it with your own images!</em>
-</p>
-
-## Evaluation
-
-#### Mapillary Geo-Localization dataset
-
-<details>
-<summary>[Click to expand]</summary>
-
-To obtain the dataset:
-
-1. Create a developper account at [mapillary.com](https://www.mapillary.com/dashboard/developers) and obtain a free access token.
-2. Run the following script to download the data from Mapillary and prepare it:
+如果你希望当前仓库可以直接被 Python 导入，建议额外执行：
 
 ```bash
-python -m maploc.data.mapillary.prepare --token $YOUR_ACCESS_TOKEN
+python -m pip install -e .
 ```
 
-By default the data is written to the directory `./datasets/MGL/`. Then run the evaluation with the pre-trained model:
+## 2. 最快跑起来
+
+### 方式一：启动本地 Demo
+
+安装完 `requirements/demo.txt` 后，直接运行：
 
 ```bash
-python -m maploc.evaluation.mapillary --experiment OrienterNet_MGL model.num_rotations=256
+python app.py
 ```
 
-This downloads the pre-trained models if necessary. The results should be close to the following:
+启动后会打开一个本地 Gradio 页面。你可以：
 
-```
-Recall xy_max_error: [14.37, 48.69, 61.7] at (1, 3, 5) m/°
-Recall yaw_max_error: [20.95, 54.96, 70.17] at (1, 3, 5) m/°
-```
+- 直接使用 `assets/` 里的示例图片
+- 上传自己的图片
+- 如果图片没有 EXIF GPS 信息，需要手动输入地址或地标名称
 
-This requires a GPU with 11GB of memory. If you run into OOM issues, consider reducing the number of rotations (the default is 256):
+说明：
+
+- 首次运行会自动下载预训练模型
+- 默认优先使用 GPU；没有 GPU 时会退回 CPU，但会慢很多
+
+### 方式二：跑仓库自带的 KITTI 子集脚本
+
+仓库里已经带了一个可直接复现实验结果的脚本：
 
 ```bash
-python -m maploc.evaluation.mapillary [...] model.num_rotations=128
+python project_assets/run_task3_kitti_subset.py --only baseline
 ```
 
-To export visualizations for the first 100 examples:
+可选参数：
 
 ```bash
-python -m maploc.evaluation.mapillary [...] --output_dir ./viz_MGL/ --num 100 
+python project_assets/run_task3_kitti_subset.py --only smoke
+python project_assets/run_task3_kitti_subset.py --only low_cost
+python project_assets/run_task3_kitti_subset.py --only all
 ```
 
-To run the evaluation in sequential mode:
+结果会输出到：
 
 ```bash
-python -m maploc.evaluation.mapillary --experiment OrienterNet_MGL --sequential model.num_rotations=256
-```
-The results should be close to the following:
-```
-Recall xy_seq_error: [29.73, 73.25, 91.17] at (1, 3, 5) m/°
-Recall yaw_seq_error: [46.55, 88.3, 96.45] at (1, 3, 5) m/°
-```
-The sequential evaluation uses 10 frames by default. To increase this number, add:
-```bash
-python -m maploc.evaluation.mapillary [...] chunking.max_length=20
+project_outputs/kitti_subset_task3/
 ```
 
+## 3. 跑 KITTI 评测
 
-</details>
+### 3.1 准备数据
 
-#### KITTI dataset
-
-<details>
-<summary>[Click to expand]</summary>
-
-1. Download and prepare the dataset to `./datasets/kitti/`:
+先下载并整理 KITTI 数据到默认目录 `datasets/kitti/`：
 
 ```bash
 python -m maploc.data.kitti.prepare
 ```
 
-2. Run the evaluation with the model trained on MGL:
+如果你想自己生成 OSM tiles，而不是使用脚本下载好的 tiles，可以加：
+
+```bash
+python -m maploc.data.kitti.prepare --generate_tiles
+```
+
+### 3.2 开始评测
+
+使用预训练模型评测：
 
 ```bash
 python -m maploc.evaluation.kitti --experiment OrienterNet_MGL model.num_rotations=256
 ```
 
-You should expect the following results:
-
-```
-Recall directional_error: [[50.33, 85.18, 92.73], [24.38, 56.13, 67.98]] at (1, 3, 5) m/°
-Recall yaw_max_error: [29.22, 68.2, 84.49] at (1, 3, 5) m/°
-```
-
-You can similarly export some visual examples:
+导出可视化结果：
 
 ```bash
-python -m maploc.evaluation.kitti [...] --output_dir ./viz_KITTI/ --num 100
+python -m maploc.evaluation.kitti --experiment OrienterNet_MGL \
+  --output_dir ./viz_KITTI --num 100 model.num_rotations=256
 ```
 
-To run in sequential mode:
+顺序模式评测：
+
 ```bash
-python -m maploc.evaluation.kitti --experiment OrienterNet_MGL --sequential model.num_rotations=256
-```
-with results:
-```
-Recall directional_seq_error: [[81.94, 97.35, 98.67], [52.57, 95.6, 97.35]] at (1, 3, 5) m/°
-Recall yaw_seq_error: [82.7, 98.63, 99.06] at (1, 3, 5) m/°
+python -m maploc.evaluation.kitti --experiment OrienterNet_MGL \
+  --sequential model.num_rotations=256
 ```
 
-</details>
+## 4. 跑 Mapillary 评测
 
-#### Aria Detroit & Seattle
+### 4.1 准备数据
 
-We are currently unable to release the dataset used to evaluate OrienterNet in the CVPR 2023 paper.
+先去 Mapillary 申请开发者 token，然后执行：
 
-## Training
+```bash
+python -m maploc.data.mapillary.prepare --token YOUR_ACCESS_TOKEN
+```
 
-#### MGL dataset
+默认会把数据放到：
 
-We trained the model on the MGL dataset using 3x 3090 GPUs (24GB VRAM each) and a total batch size of 12 for 340k iterations (about 3-4 days) with the following command:
+```bash
+datasets/MGL/
+```
+
+### 4.2 开始评测
+
+```bash
+python -m maploc.evaluation.mapillary --experiment OrienterNet_MGL model.num_rotations=256
+```
+
+导出可视化结果：
+
+```bash
+python -m maploc.evaluation.mapillary --experiment OrienterNet_MGL \
+  --output_dir ./viz_MGL --num 100 model.num_rotations=256
+```
+
+顺序模式评测：
+
+```bash
+python -m maploc.evaluation.mapillary --experiment OrienterNet_MGL \
+  --sequential model.num_rotations=256
+```
+
+如果显存不够，可以把旋转数调低，例如：
+
+```bash
+python -m maploc.evaluation.mapillary --experiment OrienterNet_MGL model.num_rotations=128
+```
+
+## 5. 训练模型
+
+训练 MGL 模型：
 
 ```bash
 python -m maploc.train experiment.name=OrienterNet_MGL_reproduce
 ```
 
-Feel free to use any other experiment name. Configurations are managed by [Hydra](https://hydra.cc/) and [OmegaConf](https://omegaconf.readthedocs.io) so any entry can be overridden from the command line. You may thus reduce the number of GPUs and the batch size via:
+如果只有 1 张 GPU，可以把 batch size 调小：
 
 ```bash
 python -m maploc.train experiment.name=OrienterNet_MGL_reproduce \
   experiment.gpus=1 data.loading.train.batch_size=4
 ```
 
-Be aware that this can reduce the overall performance. The checkpoints are written to `./experiments/experiment_name/`. Then run the evaluation:
+训练输出默认保存在：
 
 ```bash
-# the best checkpoint:
-python -m maploc.evaluation.mapillary --experiment OrienterNet_MGL_reproduce
-# a specific checkpoint:
-python -m maploc.evaluation.mapillary \
-    --experiment OrienterNet_MGL_reproduce/checkpoint-step=340000.ckpt
+experiments/OrienterNet_MGL_reproduce/
 ```
 
-#### KITTI
+训练后评测：
 
-To fine-tune a trained model on the KITTI dataset:
+```bash
+python -m maploc.evaluation.mapillary --experiment OrienterNet_MGL_reproduce
+```
+
+指定某个 checkpoint：
+
+```bash
+python -m maploc.evaluation.mapillary \
+  --experiment OrienterNet_MGL_reproduce/checkpoint-step=340000.ckpt
+```
+
+在 KITTI 上微调：
 
 ```bash
 python -m maploc.train experiment.name=OrienterNet_MGL_kitti data=kitti \
-    training.finetune_from_checkpoint='"experiments/OrienterNet_MGL_reproduce/checkpoint-step=340000.ckpt"'
+  training.finetune_from_checkpoint='"experiments/OrienterNet_MGL_reproduce/checkpoint-step=340000.ckpt"'
 ```
 
-## Interactive development
+## 6. 常用文件
 
-We provide several visualization notebooks:
+- `app.py`：本地 Demo 入口
+- `project_assets/run_task3_kitti_subset.py`：KITTI 子集实验脚本
+- `demo.ipynb`：Notebook Demo
+- `notebooks/`：可视化分析 Notebook
 
-- [Visualize predictions on the MGL dataset](./notebooks/visualize_predictions_mgl.ipynb)
-- [Visualize predictions on the KITTI dataset](./notebooks/visualize_predictions_kitti.ipynb)
-- [Visualize sequential predictions](./notebooks/visualize_predictions_sequences.ipynb)
+## 7. 常见问题
 
-## OpenStreetMap data
+### 没有定位先验，Demo 跑不起来
 
-<details>
-<summary>[Click to expand]</summary>
+如果图片里没有 EXIF GPS 信息，Demo 需要你手动输入地址、街道名或建筑名。
 
-To make sure that the results are consistent over time, we used OSM data downloaded from [Geofabrik](https://download.geofabrik.de/) in November 2021. By default, the dataset scripts `maploc.data.[mapillary,kitti].prepare` download pre-generated raster tiles. If you wish to use different OSM classes, you can pass `--generate_tiles`, which will download and use our prepared raw `.osm` XML files.
+### 第一次运行很慢
 
-You may alternatively download more recent files from [Geofabrik](https://download.geofabrik.de/). Download either compressed XML files as `.osm.bz2` or binary files `.osm.pbf`, which need to be converted to XML files `.osm`, for example using Osmium: ` osmium cat xx.osm.pbf -o xx.osm`.
+首次运行通常会自动下载预训练模型或数据文件，属于正常现象。
 
-</details>
+### 显存不够
 
-## License
+优先降低：
 
-The MGL dataset is made available under the [CC-BY-SA](https://creativecommons.org/licenses/by-sa/4.0/) license following the data available on the Mapillary platform. The model implementation and the pre-trained weights follow a [CC-BY-NC](https://creativecommons.org/licenses/by-nc/2.0/) license. [OpenStreetMap data](https://www.openstreetmap.org/copyright) is licensed under the [Open Data Commons Open Database License](https://opendatacommons.org/licenses/odbl/).
+- `model.num_rotations`
+- batch size
 
-## BibTex citation
+## 8. 参考资料
 
-Please consider citing our work if you use any code from this repo or ideas presented in the paper:
-```
-@inproceedings{sarlin2023orienternet,
-  author    = {Paul-Edouard Sarlin and
-               Daniel DeTone and
-               Tsun-Yi Yang and
-               Armen Avetisyan and
-               Julian Straub and
-               Tomasz Malisiewicz and
-               Samuel Rota Bulo and
-               Richard Newcombe and
-               Peter Kontschieder and
-               Vasileios Balntas},
-  title     = {{OrienterNet: Visual Localization in 2D Public Maps with Neural Matching}},
-  booktitle = {CVPR},
-  year      = {2023},
-}
-```
-
-
+- 论文：`2304.02009v1.pdf`
+- 项目页面：https://psarlin.com/orienternet
+- 原始仓库：https://github.com/facebookresearch/OrienterNet
