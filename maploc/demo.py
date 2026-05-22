@@ -1,9 +1,17 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 
+import os
+from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 import numpy as np
 import torch
+
+os.environ.setdefault(
+    "TORCH_HOME",
+    str(Path(__file__).resolve().parents[1] / ".cache" / "torch"),
+)
+
 from perspective2d import PerspectiveFields
 
 from . import logger
@@ -17,6 +25,18 @@ from .utils.geo import BoundaryBox, Projection
 from .utils.io import read_image
 from .utils.wrappers import Camera
 
+PERSPECTIVEFIELDS_WEIGHT = (
+    Path(os.environ["TORCH_HOME"])
+    / "hub"
+    / "checkpoints"
+    / "paramnet_360cities_edina_rpf.pth"
+)
+
+LOCAL_ADDRESS_PRIORS = {
+    "eth cab zurich": (47.3790, 8.5480),
+    "vancouver waterfront station": (49.2856, -123.1116),
+}
+
 try:
     from geopy.geocoders import Nominatim
 
@@ -27,8 +47,32 @@ except ImportError:
 
 class ImageCalibrator(PerspectiveFields):
     def __init__(self, version: str = "Paramnet-360Cities-edina-centered"):
-        super().__init__(version)
-        self.eval()
+        if (
+            not PERSPECTIVEFIELDS_WEIGHT.exists()
+            and os.environ.get("ORIENTERNET_DOWNLOAD_PERSPECTIVEFIELDS") != "1"
+        ):
+            torch.nn.Module.__init__(self)
+            self.available = False
+            logger.warning(
+                "PerspectiveFields weights not found at %s. "
+                "Falling back to EXIF/default camera calibration.",
+                PERSPECTIVEFIELDS_WEIGHT,
+            )
+            return
+
+        try:
+            super().__init__(version)
+        except Exception as exc:
+            torch.nn.Module.__init__(self)
+            self.available = False
+            logger.warning(
+                "PerspectiveFields weights unavailable (%s). "
+                "Falling back to EXIF/default camera calibration.",
+                exc,
+            )
+        else:
+            self.available = True
+            self.eval()
 
     def run(
         self,
@@ -41,6 +85,19 @@ class ImageCalibrator(PerspectiveFields):
             _, focal_ratio = exif.extract_focal()
             if focal_ratio != 0:
                 focal_length = focal_ratio * max(h, w)
+
+        if not self.available:
+            if focal_length is None:
+                focal_length = max(h, w)
+            camera = Camera.from_dict(
+                {
+                    "model": "SIMPLE_PINHOLE",
+                    "width": w,
+                    "height": h,
+                    "params": [focal_length, w / 2 + 0.5, h / 2 + 0.5],
+                }
+            )
+            return (0.0, 0.0), camera
 
         calib = self.inference(img_bgr=image_rgb[..., ::-1])
         roll_pitch = (calib["pred_roll"].item(), calib["pred_pitch"].item())
@@ -68,26 +125,35 @@ def parse_location_prior(
     if prior_latlon is not None:
         latlon = prior_latlon
         logger.info("Using prior latlon %s.", prior_latlon)
-    elif prior_address is not None:
-        if geolocator is None:
-            raise ValueError("geocoding unavailable, install geopy.")
-        location = geolocator.geocode(prior_address)
-        if location is None:
-            logger.info("Could not find any location for address '%s.'", prior_address)
-        else:
-            logger.info("Using prior address '%s'", location.address)
-            latlon = (location.latitude, location.longitude)
     if latlon is None:
         geo = exif.extract_geo()
         if geo:
             alt = geo.get("altitude", 0)  # read if available
             latlon = (geo["latitude"], geo["longitude"], alt)
             logger.info("Using prior location from EXIF.")
+    if latlon is None and prior_address is not None:
+        latlon = LOCAL_ADDRESS_PRIORS.get(prior_address.strip().lower())
+        if latlon is not None:
+            logger.info("Using built-in prior for address '%s'.", prior_address)
+    if latlon is None and prior_address is not None:
+        if geolocator is None:
+            logger.info("Geocoding unavailable, install geopy.")
         else:
-            raise ValueError(
-                "No location prior given or found in the image EXIF metadata: "
-                "maybe provide the name of a street, building or neighborhood?"
-            )
+            try:
+                location = geolocator.geocode(prior_address)
+            except Exception as exc:
+                logger.info("Could not geocode address '%s': %s", prior_address, exc)
+            else:
+                if location is None:
+                    logger.info("Could not find any location for address '%s.'", prior_address)
+                else:
+                    logger.info("Using prior address '%s'", location.address)
+                    latlon = (location.latitude, location.longitude)
+    if latlon is None:
+        raise ValueError(
+            "No location prior given or found in the image EXIF metadata: "
+            "maybe provide the name of a street, building or neighborhood?"
+        )
     return np.array(latlon)
 
 
@@ -101,7 +167,11 @@ class Demo:
         if experiment_or_path in pretrained_models:
             experiment_or_path, _ = pretrained_models[experiment_or_path]
         path = resolve_checkpoint_path(experiment_or_path)
-        ckpt = torch.load(path, map_location=(lambda storage, loc: storage))
+        ckpt = torch.load(
+            path,
+            map_location=(lambda storage, loc: storage),
+            weights_only=False,
+        )
         config = ckpt["hyper_parameters"]
         config.model.update(kwargs)
         config.model.image_encoder.backbone.pretrained = False

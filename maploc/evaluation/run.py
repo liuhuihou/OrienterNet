@@ -35,7 +35,7 @@ def resolve_checkpoint_path(experiment_or_path: str) -> Path:
     pretrained_paths = {p for p, _ in pretrained_models.values()}
     if path.is_file():
         try:
-            torch.load(path, map_location="cpu")
+            torch.load(path, map_location="cpu", weights_only=False)
         except Exception:
             if experiment_or_path in pretrained_paths or path.name in pretrained_paths:
                 logger.info("Checkpoint at %s is corrupted; redownloading.", path)
@@ -47,6 +47,7 @@ def resolve_checkpoint_path(experiment_or_path: str) -> Path:
     if not path.exists():
         if experiment_or_path in pretrained_paths:
             download_file(f"{DATA_URL}/{experiment_or_path}", path)
+            return path
         else:
             raise FileNotFoundError(path)
     # provided only the experiment name

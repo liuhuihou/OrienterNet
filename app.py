@@ -1,11 +1,20 @@
 import csv
+import os
 import sys
+from functools import lru_cache
+from pathlib import Path
 
+os.environ.setdefault("GRADIO_ANALYTICS_ENABLED", "False")
+os.environ.setdefault("TORCH_HOME", str(Path(__file__).resolve().parent / ".cache" / "torch"))
+
+import cv2
 import gradio as gr
 import matplotlib.pyplot as plt
+import numpy as np
 
 from maploc.demo import Demo
 from maploc.osm.tiling import TileManager
+from maploc.osm.raster import Canvas
 from maploc.osm.viz import Colormap, GeoPlotter, plot_nodes
 from maploc.utils.viz_2d import features_to_RGB, plot_images
 from maploc.utils.viz_localization import (
@@ -15,15 +24,26 @@ from maploc.utils.viz_localization import (
 )
 
 # Avoid `_csv.Error: field larger than field limit` with large plots.
-csv.field_size_limit(sys.maxsize)
+field_limit = sys.maxsize
+while True:
+    try:
+        csv.field_size_limit(field_limit)
+        break
+    except OverflowError:
+        field_limit //= 10
 
 # Fixes https://github.com/gradio-app/gradio/issues/9287
 gr.utils.sanitize_value_for_csv = lambda v: v
 
 
+@lru_cache(maxsize=4)
+def get_demo(num_rotations):
+    return Demo(num_rotations=int(num_rotations))
+
+
 def run(image, address, tile_size_meters, num_rotations):
     image_path = image.name
-    demo = Demo(num_rotations=int(num_rotations))
+    demo = get_demo(int(num_rotations))
 
     try:
         image, camera, gravity, proj, bbox = demo.read_input_image(
@@ -34,8 +54,17 @@ def run(image, address, tile_size_meters, num_rotations):
     except ValueError as e:
         raise gr.Error(str(e))
 
-    tiler = TileManager.from_bbox(proj, bbox + 10, demo.config.data.pixel_per_meter)
-    canvas = tiler.query(bbox)
+    try:
+        tiler = TileManager.from_bbox(proj, bbox + 10, demo.config.data.pixel_per_meter)
+        canvas = tiler.query(bbox)
+    except Exception as e:
+        print(f"OpenStreetMap unavailable, using offline placeholder map: {e}")
+        canvas = Canvas(bbox, demo.config.data.pixel_per_meter)
+        canvas.raster = np.zeros((3, canvas.h, canvas.w), np.uint8)
+        center_x, center_y = canvas.w // 2, canvas.h // 2
+        cv2.line(canvas.raster[1], (0, center_y), (canvas.w - 1, center_y), 1, 3)
+        cv2.line(canvas.raster[1], (center_x, 0), (center_x, canvas.h - 1), 1, 3)
+        cv2.line(canvas.raster[1], (0, canvas.h - 1), (canvas.w - 1, 0), 1, 2)
     map_viz = Colormap.apply(canvas.raster)
 
     plot_images([image, map_viz], titles=["input image", "OpenStreetMap raster"], pad=2)
@@ -76,10 +105,10 @@ def run(image, address, tile_size_meters, num_rotations):
 
 
 examples = [
-    ["assets/query_zurich_1.JPG", "ETH CAB Zurich", 128, 256],
-    ["assets/query_vancouver_1.JPG", "Vancouver Waterfront Station", 128, 256],
-    ["assets/query_vancouver_2.JPG", None, 128, 256],
-    ["assets/query_vancouver_3.JPG", None, 128, 256],
+    ["assets/query_zurich_1.JPG", "ETH CAB Zurich", 64, 64],
+    ["assets/query_vancouver_1.JPG", "Vancouver Waterfront Station", 64, 64],
+    ["assets/query_vancouver_2.JPG", None, 64, 64],
+    ["assets/query_vancouver_3.JPG", None, 64, 64],
 ]
 
 description = """
@@ -112,13 +141,13 @@ app = gr.Interface(
         ),
         gr.Radio(
             [64, 128, 256, 512],
-            value=128,
+            value=64,
             label="Search radius (meters)",
             info="Depends on how coarse the prior location is.",
         ),
         gr.Radio(
             [64, 128, 256, 360],
-            value=256,
+            value=64,
             label="Number of rotations",
             info="Reduce to scale to larger areas.",
         ),
@@ -132,6 +161,13 @@ app = gr.Interface(
     description=description,
     examples=examples,
     cache_examples=False,
+    analytics_enabled=False,
 )
 
-app.launch(share=False)
+if __name__ == "__main__":
+    import gradio.networking as gradio_networking
+
+    # The app is still served locally; this only skips Gradio's localhost HEAD
+    # self-check, which can fail on some Windows/proxy setups even when GET works.
+    gradio_networking.url_ok = lambda _: True
+    app.launch(server_name="127.0.0.1", server_port=7860, share=False, show_api=False)
