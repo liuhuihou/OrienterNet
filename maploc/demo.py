@@ -1,6 +1,7 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 
 import os
+import re
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
@@ -35,6 +36,8 @@ PERSPECTIVEFIELDS_WEIGHT = (
 LOCAL_ADDRESS_PRIORS = {
     "eth cab zurich": (47.3790, 8.5480),
     "vancouver waterfront station": (49.2856, -123.1116),
+    "南昌工学院": (28.61664, 115.766612),
+    "nanchang institute of science and technology": (28.61664, 115.766612),
 }
 
 try:
@@ -132,9 +135,20 @@ def parse_location_prior(
             latlon = (geo["latitude"], geo["longitude"], alt)
             logger.info("Using prior location from EXIF.")
     if latlon is None and prior_address is not None:
-        latlon = LOCAL_ADDRESS_PRIORS.get(prior_address.strip().lower())
-        if latlon is not None:
-            logger.info("Using built-in prior for address '%s'.", prior_address)
+        address = prior_address.strip()
+        match = re.match(
+            r"^\s*(?:lat(?:itude)?\s*[:=]?\s*)?(-?\d+(?:\.\d+)?)\s*[,， ]\s*"
+            r"(?:lon(?:gitude)?\s*[:=]?\s*)?(-?\d+(?:\.\d+)?)\s*$",
+            address,
+            flags=re.IGNORECASE,
+        )
+        if match:
+            latlon = (float(match.group(1)), float(match.group(2)))
+            logger.info("Using prior latlon parsed from address field %s.", latlon)
+        else:
+            latlon = LOCAL_ADDRESS_PRIORS.get(address.lower())
+            if latlon is not None:
+                logger.info("Using built-in prior for address '%s'.", prior_address)
     if latlon is None and prior_address is not None:
         if geolocator is None:
             logger.info("Geocoding unavailable, install geopy.")
