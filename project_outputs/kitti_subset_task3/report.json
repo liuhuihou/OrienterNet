@@ -1,47 +1,256 @@
 {
-  "smoke_default_1frame": {
-    "name": "smoke_default_1frame",
-    "elapsed_sec": 997.036,
-    "num_samples": 1,
-    "note": "Cold-start smoke validation only; not used for final cost comparison.",
-    "metrics": {
-      "directional_error_mean_m": [
-        1.0342,
-        3.2977
-      ],
-      "yaw_max_error_mean_deg": 4.5953
+  "runs": {
+    "smoke_default_1frame": {
+      "name": "smoke_default_1frame",
+      "elapsed_sec": 15.001,
+      "num_samples": 1,
+      "config": {
+        "model": {
+          "image_encoder": {
+            "backbone": {
+              "pretrained": false
+            }
+          }
+        },
+        "data": {
+          "data_dir": "E:\\code_file\\robot_final_project\\OrienterNet\\datasets\\kitti_subset",
+          "tiles_filename": "tiles.pkl",
+          "splits": {
+            "train": "E:\\code_file\\robot_final_project\\OrienterNet\\project_assets\\kitti_subset_success.txt",
+            "val": "E:\\code_file\\robot_final_project\\OrienterNet\\project_assets\\kitti_subset_success.txt",
+            "test": "E:\\code_file\\robot_final_project\\OrienterNet\\project_assets\\kitti_subset_success.txt"
+          },
+          "loading": {
+            "train": {
+              "batch_size": 1,
+              "num_workers": 0
+            },
+            "val": {
+              "batch_size": 1,
+              "num_workers": 0
+            },
+            "test": {
+              "batch_size": 1,
+              "num_workers": 0
+            }
+          },
+          "max_num_val": null,
+          "drop_train_too_close_to_val": null
+        }
+      },
+      "metrics": {
+        "directional_error_mean_m": [
+          1.0342,
+          3.2977
+        ],
+        "yaw_max_error_mean_deg": 4.5953,
+        "directional_recall_at_1_3_5m": [
+          [
+            0.0,
+            100.0,
+            100.0
+          ],
+          [
+            0.0,
+            0.0,
+            100.0
+          ]
+        ],
+        "yaw_recall_at_1_3_5deg": [
+          0.0,
+          0.0,
+          100.0
+        ]
+      }
+    },
+    "baseline_default": {
+      "name": "baseline_default",
+      "elapsed_sec": 37.013,
+      "num_samples": 5,
+      "config": {
+        "model": {
+          "image_encoder": {
+            "backbone": {
+              "pretrained": false
+            }
+          }
+        },
+        "data": {
+          "data_dir": "E:\\code_file\\robot_final_project\\OrienterNet\\datasets\\kitti_subset",
+          "tiles_filename": "tiles.pkl",
+          "splits": {
+            "train": "E:\\code_file\\robot_final_project\\OrienterNet\\project_assets\\kitti_subset_test.txt",
+            "val": "E:\\code_file\\robot_final_project\\OrienterNet\\project_assets\\kitti_subset_test.txt",
+            "test": "E:\\code_file\\robot_final_project\\OrienterNet\\project_assets\\kitti_subset_test.txt"
+          },
+          "loading": {
+            "train": {
+              "batch_size": 1,
+              "num_workers": 0
+            },
+            "val": {
+              "batch_size": 1,
+              "num_workers": 0
+            },
+            "test": {
+              "batch_size": 1,
+              "num_workers": 0
+            }
+          },
+          "max_num_val": null,
+          "drop_train_too_close_to_val": null
+        }
+      },
+      "metrics": {
+        "directional_error_mean_m": [
+          1.7901,
+          3.4362
+        ],
+        "yaw_max_error_mean_deg": 3.6082,
+        "directional_recall_at_1_3_5m": [
+          [
+            40.0,
+            80.0,
+            100.0
+          ],
+          [
+            0.0,
+            20.0,
+            100.0
+          ]
+        ],
+        "yaw_recall_at_1_3_5deg": [
+          20.0,
+          40.0,
+          60.0
+        ]
+      }
+    },
+    "low_cost_rot32_crop48": {
+      "name": "low_cost_rot32_crop48",
+      "elapsed_sec": 21.319,
+      "num_samples": 5,
+      "config": {
+        "model": {
+          "image_encoder": {
+            "backbone": {
+              "pretrained": false
+            }
+          },
+          "num_rotations": 32
+        },
+        "data": {
+          "data_dir": "E:\\code_file\\robot_final_project\\OrienterNet\\datasets\\kitti_subset",
+          "tiles_filename": "tiles.pkl",
+          "splits": {
+            "train": "E:\\code_file\\robot_final_project\\OrienterNet\\project_assets\\kitti_subset_test.txt",
+            "val": "E:\\code_file\\robot_final_project\\OrienterNet\\project_assets\\kitti_subset_test.txt",
+            "test": "E:\\code_file\\robot_final_project\\OrienterNet\\project_assets\\kitti_subset_test.txt"
+          },
+          "loading": {
+            "train": {
+              "batch_size": 1,
+              "num_workers": 0
+            },
+            "val": {
+              "batch_size": 1,
+              "num_workers": 0
+            },
+            "test": {
+              "batch_size": 1,
+              "num_workers": 0
+            }
+          },
+          "max_num_val": null,
+          "drop_train_too_close_to_val": null,
+          "crop_size_meters": 48,
+          "max_init_error": 16
+        }
+      },
+      "metrics": {
+        "directional_error_mean_m": [
+          1.7642,
+          3.7002
+        ],
+        "yaw_max_error_mean_deg": 7.2644,
+        "directional_recall_at_1_3_5m": [
+          [
+            40.0,
+            80.0,
+            100.0
+          ],
+          [
+            0.0,
+            20.0,
+            100.0
+          ]
+        ],
+        "yaw_recall_at_1_3_5deg": [
+          0.0,
+          0.0,
+          40.0
+        ]
+      }
     }
   },
-  "baseline_default": {
-    "name": "baseline_default",
-    "elapsed_sec": 27.876,
-    "wall_clock_sec": 31.23,
-    "peak_rss_gib": 6.78,
-    "num_samples": 5,
-    "metrics": {
-      "directional_error_mean_m": [
-        1.7901,
-        3.4362
+  "resources": {
+    "smoke_default_1frame": {
+      "mode": "smoke",
+      "name": "smoke_default_1frame",
+      "label": "smoke_default_1frame",
+      "num_rotations": 256,
+      "crop_size_meters": "default",
+      "max_init_error": "default",
+      "command": [
+        "E:\\code_file\\robot_final_project\\OrienterNet\\.venv\\Scripts\\python.exe",
+        "E:\\code_file\\robot_final_project\\OrienterNet\\project_assets\\run_task3_kitti_subset.py",
+        "--only",
+        "smoke"
       ],
-      "yaw_max_error_mean_deg": 3.6082,
-      "xy_recall_5m": 80.0,
-      "yaw_recall_5deg": 60.0
+      "wall_clock_sec": 22.048,
+      "peak_rss_bytes": 7486971904,
+      "peak_rss_gib": 6.973,
+      "stdout_log": "project_outputs\\kitti_subset_task3\\_logs\\smoke_default_1frame.stdout.log",
+      "stderr_log": "project_outputs\\kitti_subset_task3\\_logs\\smoke_default_1frame.stderr.log"
+    },
+    "baseline_default": {
+      "mode": "baseline",
+      "name": "baseline_default",
+      "label": "baseline_default",
+      "num_rotations": 256,
+      "crop_size_meters": "default",
+      "max_init_error": "default",
+      "command": [
+        "E:\\code_file\\robot_final_project\\OrienterNet\\.venv\\Scripts\\python.exe",
+        "E:\\code_file\\robot_final_project\\OrienterNet\\project_assets\\run_task3_kitti_subset.py",
+        "--only",
+        "baseline"
+      ],
+      "wall_clock_sec": 39.634,
+      "peak_rss_bytes": 8281886720,
+      "peak_rss_gib": 7.713,
+      "stdout_log": "project_outputs\\kitti_subset_task3\\_logs\\baseline_default.stdout.log",
+      "stderr_log": "project_outputs\\kitti_subset_task3\\_logs\\baseline_default.stderr.log"
+    },
+    "low_cost_rot32_crop48": {
+      "mode": "low_cost",
+      "name": "low_cost_rot32_crop48",
+      "label": "low_cost_rot32_crop48",
+      "num_rotations": 32,
+      "crop_size_meters": 48,
+      "max_init_error": 16,
+      "command": [
+        "E:\\code_file\\robot_final_project\\OrienterNet\\.venv\\Scripts\\python.exe",
+        "E:\\code_file\\robot_final_project\\OrienterNet\\project_assets\\run_task3_kitti_subset.py",
+        "--only",
+        "low_cost"
+      ],
+      "wall_clock_sec": 29.614,
+      "peak_rss_bytes": 3958263808,
+      "peak_rss_gib": 3.686,
+      "stdout_log": "project_outputs\\kitti_subset_task3\\_logs\\low_cost_rot32_crop48.stdout.log",
+      "stderr_log": "project_outputs\\kitti_subset_task3\\_logs\\low_cost_rot32_crop48.stderr.log"
     }
   },
-  "low_cost_rot32_crop48": {
-    "name": "low_cost_rot32_crop48",
-    "elapsed_sec": 19.229,
-    "wall_clock_sec": 23.29,
-    "peak_rss_gib": 3.45,
-    "num_samples": 5,
-    "metrics": {
-      "directional_error_mean_m": [
-        1.7642,
-        3.7002
-      ],
-      "yaw_max_error_mean_deg": 7.2644,
-      "xy_recall_5m": 60.0,
-      "yaw_recall_5deg": 40.0
-    }
-  }
+  "note": "baseline_default was rerun after the full run; baseline summary reflects the latest rerun, while resource metrics are from the full resource-measured run."
 }

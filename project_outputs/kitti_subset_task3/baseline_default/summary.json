@@ -1,6 +1,6 @@
 {
   "name": "baseline_default",
-  "elapsed_sec": 27.876,
+  "elapsed_sec": 37.013,
   "num_samples": 5,
   "config": {
     "model": {
@@ -11,12 +11,12 @@
       }
     },
     "data": {
-      "data_dir": "/home/liujiahui/myfile/robote_project/final project/OrienterNet/datasets/kitti_subset",
+      "data_dir": "E:\\code_file\\robot_final_project\\OrienterNet\\datasets\\kitti_subset",
       "tiles_filename": "tiles.pkl",
       "splits": {
-        "train": "/home/liujiahui/myfile/robote_project/final project/OrienterNet/project_assets/kitti_subset_test.txt",
-        "val": "/home/liujiahui/myfile/robote_project/final project/OrienterNet/project_assets/kitti_subset_test.txt",
-        "test": "/home/liujiahui/myfile/robote_project/final project/OrienterNet/project_assets/kitti_subset_test.txt"
+        "train": "E:\\code_file\\robot_final_project\\OrienterNet\\project_assets\\kitti_subset_test.txt",
+        "val": "E:\\code_file\\robot_final_project\\OrienterNet\\project_assets\\kitti_subset_test.txt",
+        "test": "E:\\code_file\\robot_final_project\\OrienterNet\\project_assets\\kitti_subset_test.txt"
       },
       "loading": {
         "train": {

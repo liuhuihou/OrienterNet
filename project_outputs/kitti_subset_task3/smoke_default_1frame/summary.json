@@ -1,6 +1,6 @@
 {
   "name": "smoke_default_1frame",
-  "elapsed_sec": 997.036,
+  "elapsed_sec": 15.001,
   "num_samples": 1,
   "config": {
     "model": {
@@ -11,12 +11,12 @@
       }
     },
     "data": {
-      "data_dir": "/home/liujiahui/myfile/robote_project/final project/OrienterNet/datasets/kitti_subset",
+      "data_dir": "E:\\code_file\\robot_final_project\\OrienterNet\\datasets\\kitti_subset",
       "tiles_filename": "tiles.pkl",
       "splits": {
-        "train": "/home/liujiahui/myfile/robote_project/final project/OrienterNet/project_assets/kitti_subset_success.txt",
-        "val": "/home/liujiahui/myfile/robote_project/final project/OrienterNet/project_assets/kitti_subset_success.txt",
-        "test": "/home/liujiahui/myfile/robote_project/final project/OrienterNet/project_assets/kitti_subset_success.txt"
+        "train": "E:\\code_file\\robot_final_project\\OrienterNet\\project_assets\\kitti_subset_success.txt",
+        "val": "E:\\code_file\\robot_final_project\\OrienterNet\\project_assets\\kitti_subset_success.txt",
+        "test": "E:\\code_file\\robot_final_project\\OrienterNet\\project_assets\\kitti_subset_success.txt"
       },
       "loading": {
         "train": {

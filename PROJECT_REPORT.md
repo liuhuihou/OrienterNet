@@ -117,11 +117,11 @@ python -m maploc.evaluation.kitti --experiment OrienterNet_MGL model.num_rotatio
 
 | 项目 | 数值 |
 |---|---|
-| 操作系统 | Ubuntu Linux 5.15.0-139-generic x86_64 |
-| Python | 3.8.10 |
-| PyTorch | 2.4.1+cu121 |
-| Torchvision | 0.19.1+cu121 |
-| PyTorch Lightning | 2.4.0 |
+| 操作系统 | Windows 10.0.26200 x86_64 |
+| Python | 3.11.9 |
+| PyTorch | 2.12.0 |
+| Torchvision | 0.27.0 |
+| PyTorch Lightning | 2.6.4 |
 | Hydra | 1.3.2 |
 | OmegaConf | 2.3.0 |
 | CUDA 是否可用 | False |
@@ -154,34 +154,42 @@ python -m maploc.evaluation.kitti --experiment OrienterNet_MGL model.num_rotatio
 
 数据准备：
 
-```bash
-python - <<'PY'
+```powershell
+$root = "datasets\kitti_subset"
+New-Item -ItemType Directory -Force $root | Out-Null
+
+@'
 from pathlib import Path
 from maploc.utils.io import download_file
 root = Path('datasets/kitti_subset')
 download_file('https://cvg-data.inf.ethz.ch/OrienterNet_CVPR2023/tiles/kitti.pkl', root / 'tiles.pkl')
 download_file('https://s3.eu-central-1.amazonaws.com/avg-kitti/raw_data/2011_09_26_calib.zip', root / '2011_09_26_calib.zip')
 download_file('https://s3.eu-central-1.amazonaws.com/avg-kitti/raw_data/2011_09_26_drive_0005/2011_09_26_drive_0005_sync.zip', root / '2011_09_26_drive_0005_sync.zip')
-PY
+'@ | .\.venv\Scripts\python.exe -
+
+Expand-Archive -LiteralPath "$root\2011_09_26_calib.zip" -DestinationPath $root -Force
+Expand-Archive -LiteralPath "$root\2011_09_26_drive_0005_sync.zip" -DestinationPath $root -Force
 ```
 
-基线评测：
+一键重跑全部 Task 3 产物：
 
-```bash
-MPLCONFIGDIR=/tmp/matplotlib ../.venv/bin/python project_assets/run_task3_kitti_subset.py --only baseline
+```powershell
+$env:MPLCONFIGDIR = "$PWD\.cache\matplotlib"
+.\.venv\Scripts\python.exe project_assets\run_task3_full.py --archive-existing
 ```
 
-资源统计：
+单独运行基线评测：
 
-```bash
-MPLCONFIGDIR=/tmp/matplotlib /usr/bin/time -v \
-  ../.venv/bin/python project_assets/run_task3_kitti_subset.py --only baseline
+```powershell
+$env:MPLCONFIGDIR = "$PWD\.cache\matplotlib"
+.\.venv\Scripts\python.exe project_assets\run_task3_kitti_subset.py --only baseline
 ```
 
 逐帧误差导出：
 
-```bash
-MPLCONFIGDIR=/tmp/matplotlib ../.venv/bin/python project_assets/export_case_metrics.py
+```powershell
+$env:MPLCONFIGDIR = "$PWD\.cache\matplotlib"
+.\.venv\Scripts\python.exe project_assets\export_case_metrics.py
 ```
 
 ### 5.5 基线结果
@@ -207,9 +215,9 @@ MPLCONFIGDIR=/tmp/matplotlib ../.venv/bin/python project_assets/export_case_metr
 | 平均航向误差 | 3.6082 deg |
 | `xy_recall_5m` | 80% |
 | `yaw_recall_5deg` | 60% |
-| Python 脚本内部计时 | 27.876 s |
-| `time -v` 墙钟时间 | 31.23 s |
-| 峰值常驻内存 RSS | 7,112,936 KB ≈ 6.78 GiB |
+| Python 脚本内部计时 | 37.013 s |
+| 独立进程墙钟时间 | 39.634 s |
+| 峰值常驻内存 RSS | 7.713 GiB |
 
 ### 5.7 基线成功与失败案例
 
@@ -284,9 +292,9 @@ Task 3 的核心不是继续提高精度，而是研究：
 | 平均航向误差 | 3.6082 deg | 7.2644 deg | 明显变差 |
 | `xy_recall_5m` | 80% | 60% | -20 pts |
 | `yaw_recall_5deg` | 60% | 40% | -20 pts |
-| Python 脚本内部计时 | 27.876 s | 19.229 s | **加速 31.0%** |
-| `time -v` 墙钟时间 | 31.23 s | 23.29 s | **加速 25.4%** |
-| 峰值 RSS | 6.78 GiB | 3.45 GiB | **降低 49.1%** |
+| Python 脚本内部计时 | 37.013 s | 21.319 s | **加速 42.4%** |
+| 独立进程墙钟时间 | 39.634 s | 29.614 s | **加速 25.3%** |
+| 峰值 RSS | 7.713 GiB | 3.686 GiB | **降低 52.2%** |
 
 ### 7.2 逐帧结果比较
 
@@ -419,12 +427,15 @@ Low-cost 逐帧误差文件：
 
 - 自动化实验脚本：
   - `project_assets/run_task3_kitti_subset.py`
+  - `project_assets/run_task3_full.py`
   - `project_assets/export_case_metrics.py`
 - 本地子集 split：
   - `project_assets/kitti_subset_test.txt`
   - `project_assets/kitti_subset_success.txt`
 - 可视化批量导出修复：
   - `maploc/evaluation/viz.py`
+- PyTorch 2.6+ checkpoint 加载兼容修复：
+  - `maploc/module.py`
 
 ### 11.2 技术报告
 
@@ -438,6 +449,9 @@ Low-cost 逐帧误差文件：
 
 - `project_outputs/kitti_subset_task3/baseline_default/`
 - `project_outputs/kitti_subset_task3/low_cost_rot32_crop48/`
+- `project_outputs/kitti_subset_task3/_logs/`
+- `project_outputs/kitti_subset_task3/resource_metrics.json`
+- `project_outputs/kitti_subset_task3/resource_metrics.csv`
 - `project_outputs/kitti_subset_task3/RESULTS_SUMMARY.md`
 - `project_outputs/kitti_subset_task3/summary_table.csv`
 

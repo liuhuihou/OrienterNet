@@ -1,0 +1,65 @@
+{
+  "smoke_default_1frame": {
+    "name": "smoke_default_1frame",
+    "elapsed_sec": 15.575,
+    "num_samples": 1,
+    "config": {
+      "model": {
+        "image_encoder": {
+          "backbone": {
+            "pretrained": false
+          }
+        }
+      },
+      "data": {
+        "data_dir": "E:\\code_file\\robot_final_project\\OrienterNet\\datasets\\kitti_subset",
+        "tiles_filename": "tiles.pkl",
+        "splits": {
+          "train": "E:\\code_file\\robot_final_project\\OrienterNet\\project_assets\\kitti_subset_success.txt",
+          "val": "E:\\code_file\\robot_final_project\\OrienterNet\\project_assets\\kitti_subset_success.txt",
+          "test": "E:\\code_file\\robot_final_project\\OrienterNet\\project_assets\\kitti_subset_success.txt"
+        },
+        "loading": {
+          "train": {
+            "batch_size": 1,
+            "num_workers": 0
+          },
+          "val": {
+            "batch_size": 1,
+            "num_workers": 0
+          },
+          "test": {
+            "batch_size": 1,
+            "num_workers": 0
+          }
+        },
+        "max_num_val": null,
+        "drop_train_too_close_to_val": null
+      }
+    },
+    "metrics": {
+      "directional_error_mean_m": [
+        1.0342,
+        3.2977
+      ],
+      "yaw_max_error_mean_deg": 4.5953,
+      "directional_recall_at_1_3_5m": [
+        [
+          0.0,
+          100.0,
+          100.0
+        ],
+        [
+          0.0,
+          0.0,
+          100.0
+        ]
+      ],
+      "yaw_recall_at_1_3_5deg": [
+        0.0,
+        0.0,
+        100.0
+      ]
+    }
+  }
+}

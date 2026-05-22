@@ -73,9 +73,9 @@ Why this route:
 
 # Slide 6: Environment
 
-- OS: Ubuntu Linux
-- Python: 3.8.10
-- PyTorch: 2.4.1
+- OS: Windows 10.0.26200
+- Python: 3.11.9
+- PyTorch: 2.12.0
 - CPU-only environment
 - CUDA available: `False`
 
@@ -96,8 +96,8 @@ Therefore Task 3 compares:
 | Mean yaw error | 3.6082 deg |
 | `xy_recall_5m` | 80% |
 | `yaw_recall_5deg` | 60% |
-| Runtime | 27.876 s |
-| Peak RSS | 6.78 GiB |
+| Eval runtime | 37.013 s |
+| Peak RSS | 7.713 GiB |
 
 ---
 
@@ -139,8 +139,8 @@ Compared settings:
 
 | Metric | Baseline | Low-cost |
 |---|---:|---:|
-| Runtime | 27.876 s | 19.229 s |
-| Peak RSS | 6.78 GiB | 3.45 GiB |
+| Eval runtime | 37.013 s | 21.319 s |
+| Peak RSS | 7.713 GiB | 3.686 GiB |
 | `xy_recall_5m` | 80% | 60% |
 | `yaw_recall_5deg` | 60% | 40% |
 | Mean yaw error | 3.6082 deg | 7.2644 deg |

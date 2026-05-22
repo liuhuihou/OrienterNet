@@ -23,30 +23,40 @@
 - Combined summary:
   - `project_outputs/kitti_subset_task3/RESULTS_SUMMARY.md`
   - `project_outputs/kitti_subset_task3/summary_table.csv`
+- Resource metrics:
+  - `project_outputs/kitti_subset_task3/resource_metrics.json`
+  - `project_outputs/kitti_subset_task3/resource_metrics.csv`
+- Run logs:
+  - `project_outputs/kitti_subset_task3/_logs/`
 
 ## Reproduction Commands
 
+Run all Task 3 outputs, including smoke, baseline, low-cost, case metrics, logs, and resource metrics:
+
+```powershell
+$env:MPLCONFIGDIR = "$PWD\.cache\matplotlib"
+.\.venv\Scripts\python.exe project_assets\run_task3_full.py --archive-existing
+```
+
 Run baseline:
 
-```bash
-MPLCONFIGDIR=/tmp/matplotlib ../.venv/bin/python project_assets/run_task3_kitti_subset.py --only baseline
+```powershell
+$env:MPLCONFIGDIR = "$PWD\.cache\matplotlib"
+.\.venv\Scripts\python.exe project_assets\run_task3_kitti_subset.py --only baseline
 ```
 
 Run low-cost setting:
 
-```bash
-MPLCONFIGDIR=/tmp/matplotlib ../.venv/bin/python project_assets/run_task3_kitti_subset.py --only low_cost
+```powershell
+$env:MPLCONFIGDIR = "$PWD\.cache\matplotlib"
+.\.venv\Scripts\python.exe project_assets\run_task3_kitti_subset.py --only low_cost
 ```
 
 Export case-level metrics:
 
-```bash
-MPLCONFIGDIR=/tmp/matplotlib ../.venv/bin/python project_assets/export_case_metrics.py
+```powershell
+$env:MPLCONFIGDIR = "$PWD\.cache\matplotlib"
+.\.venv\Scripts\python.exe project_assets\export_case_metrics.py
 ```
 
-Record resource usage:
-
-```bash
-MPLCONFIGDIR=/tmp/matplotlib /usr/bin/time -v \
-  ../.venv/bin/python project_assets/run_task3_kitti_subset.py --only baseline
-```
+Resource usage is recorded by `project_assets/run_task3_full.py` with per-process wall-clock time and peak RSS.
